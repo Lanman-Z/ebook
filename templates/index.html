@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EBook Demo Shelf</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="page-shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <p class="eyebrow">FastAPI Demo</p>
+                <h1>EBook Shared Shelf</h1>
+                <p class="muted">Upload PDF or EPUB, open this host IP in a browser, and everyone on the LAN can read and comment.</p>
+            </div>
+
+            <form id="upload-form" class="panel form-panel">
+                <h2>Upload Book</h2>
+                <label>
+                    <span>Book Title</span>
+                    <input id="title-input" name="title" type="text" placeholder="Leave empty to use the file name">
+                </label>
+                <label>
+                    <span>EBook File</span>
+                    <input id="file-input" name="file" type="file" accept=".pdf,.epub" required>
+                </label>
+                <button type="submit">Upload to Shelf</button>
+                <p id="upload-status" class="status-text"></p>
+            </form>
+
+            <section class="panel shelf-panel">
+                <div class="section-title">
+                    <h2>Uploaded Books</h2>
+                    <button id="refresh-books" type="button" class="ghost-button">Refresh</button>
+                </div>
+                <div id="books-list" class="book-list"></div>
+            </section>
+        </aside>
+
+        <main class="content">
+            <section class="panel reader-panel">
+                <div class="section-title">
+                    <div>
+                        <p class="eyebrow">Reader</p>
+                        <h2 id="book-title">Pick a book</h2>
+                    </div>
+                    <p id="book-meta" class="muted"></p>
+                </div>
+
+                <div id="reader-empty" class="empty-state">
+                    <p>Upload a book or choose one from the shelf to start reading.</p>
+                </div>
+
+                <div id="reader-view" class="reader-view hidden">
+                    <div class="selection-bar">
+                        <p>Select a sentence or passage in the reader, then write a public comment for it.</p>
+                        <button id="clear-selection" type="button" class="ghost-button">Clear Selection</button>
+                    </div>
+                    <div id="selected-text-box" class="selected-text-box">
+                        <strong>Current selection:</strong>
+                        <span id="selected-text">Nothing selected yet</span>
+                    </div>
+                    <article id="reader-content" class="reader-content"></article>
+                </div>
+            </section>
+
+            <section class="panel review-panel">
+                <div class="section-title">
+                    <div>
+                        <p class="eyebrow">Reviews</p>
+                        <h2>Comment on a line</h2>
+                    </div>
+                </div>
+
+                <form id="review-form" class="review-form">
+                    <label>
+                        <span>Your Name</span>
+                        <input id="reviewer-input" name="reviewer" type="text" placeholder="For example: Lin" required>
+                    </label>
+                    <label>
+                        <span>Selected Text</span>
+                        <textarea id="selected-text-input" name="selected_text" rows="3" readonly placeholder="Select text in the reader first"></textarea>
+                    </label>
+                    <label>
+                        <span>Your Comment</span>
+                        <textarea id="comment-input" name="comment" rows="4" placeholder="Write what you think..." required></textarea>
+                    </label>
+                    <button id="submit-review" type="submit">Publish Review</button>
+                    <p id="review-status" class="status-text"></p>
+                </form>
+
+                <div class="reviews-header">
+                    <h3>Public Reviews</h3>
+                    <button id="refresh-reviews" type="button" class="ghost-button">Refresh Reviews</button>
+                </div>
+                <div id="reviews-list" class="reviews-list"></div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const state = {
+            books: [],
+            currentBookId: null,
+            currentBook: null,
+            selectedText: ""
+        };
+
+        const booksList = document.getElementById("books-list");
+        const uploadForm = document.getElementById("upload-form");
+        const uploadStatus = document.getElementById("upload-status");
+        const reviewForm = document.getElementById("review-form");
+        const reviewStatus = document.getElementById("review-status");
+        const selectedTextView = document.getElementById("selected-text");
+        const selectedTextInput = document.getElementById("selected-text-input");
+        const readerContent = document.getElementById("reader-content");
+        const reviewsList = document.getElementById("reviews-list");
+        const readerEmpty = document.getElementById("reader-empty");
+        const readerView = document.getElementById("reader-view");
+        const bookTitle = document.getElementById("book-title");
+        const bookMeta = document.getElementById("book-meta");
+
+        function setStatus(element, message, isError = false) {
+            element.textContent = message;
+            element.classList.toggle("error", isError);
+        }
+
+        function formatTime(isoText) {
+            const date = new Date(isoText);
+            if (Number.isNaN(date.getTime())) {
+                return isoText;
+            }
+            return date.toLocaleString();
+        }
+
+        function setSelectedText(value) {
+            const text = (value || "").trim();
+            state.selectedText = text;
+            selectedTextView.textContent = text || "Nothing selected yet";
+            selectedTextInput.value = text;
+        }
+
+        function renderBooks() {
+            if (!state.books.length) {
+                booksList.innerHTML = '<p class="muted">No books uploaded yet.</p>';
+                return;
+            }
+
+            booksList.innerHTML = state.books.map((book) => `
+                <button class="book-card ${book.id === state.currentBookId ? "active" : ""}" data-book-id="${book.id}">
+                    <span class="book-card-type">${book.file_type.toUpperCase()}</span>
+                    <strong>${escapeHtml(book.title)}</strong>
+                    <span>${escapeHtml(book.original_name)}</span>
+                    <small>${formatTime(book.created_at)}</small>
+                </button>
+            `).join("");
+
+            document.querySelectorAll("[data-book-id]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    loadBook(Number(button.dataset.bookId));
+                });
+            });
+        }
+
+        function renderReader(book) {
+            bookTitle.textContent = book.title;
+            bookMeta.textContent = `${book.file_type.toUpperCase()} | ${book.original_name} | uploaded ${formatTime(book.created_at)}`;
+
+            readerEmpty.classList.add("hidden");
+            readerView.classList.remove("hidden");
+
+            const paragraphs = (book.paragraphs || []).length ? book.paragraphs : [book.content];
+            readerContent.innerHTML = paragraphs.map((paragraph) => `
+                <p class="reader-paragraph">${escapeHtml(paragraph)}</p>
+            `).join("");
+
+            attachSelectionListener();
+        }
+
+        function renderReviews(reviews) {
+            if (!reviews.length) {
+                reviewsList.innerHTML = '<p class="muted">No public reviews for this book yet.</p>';
+                return;
+            }
+
+            reviewsList.innerHTML = reviews.map((review) => `
+                <article class="review-card">
+                    <div class="review-head">
+                        <strong>${escapeHtml(review.reviewer)}</strong>
+                        <span>${formatTime(review.created_at)}</span>
+                    </div>
+                    <blockquote>${escapeHtml(review.selected_text)}</blockquote>
+                    <p>${escapeHtml(review.comment)}</p>
+                </article>
+            `).join("");
+        }
+
+        function escapeHtml(text) {
+            return (text || "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#39;");
+        }
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, options);
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.detail || "Request failed");
+            }
+            return payload;
+        }
+
+        async function loadBooks() {
+            const data = await fetchJson("/api/books");
+            state.books = data.books || [];
+            renderBooks();
+        }
+
+        async function loadBook(bookId) {
+            const data = await fetchJson(`/api/books/${bookId}`);
+            state.currentBookId = bookId;
+            state.currentBook = data.book;
+            renderBooks();
+            renderReader(data.book);
+            setSelectedText("");
+            await loadReviews();
+        }
+
+        async function loadReviews() {
+            if (!state.currentBookId) {
+                reviewsList.innerHTML = '<p class="muted">Open a book to see its reviews.</p>';
+                return;
+            }
+            const data = await fetchJson(`/api/books/${state.currentBookId}/reviews`);
+            renderReviews(data.reviews || []);
+        }
+
+        function attachSelectionListener() {
+            readerContent.onmouseup = () => {
+                const selected = window.getSelection()?.toString() || "";
+                setSelectedText(selected);
+            };
+            readerContent.onkeyup = () => {
+                const selected = window.getSelection()?.toString() || "";
+                setSelectedText(selected);
+            };
+        }
+
+        uploadForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            setStatus(uploadStatus, "Uploading and parsing the ebook...");
+            const formData = new FormData(uploadForm);
+            try {
+                const data = await fetchJson("/api/books", {
+                    method: "POST",
+                    body: formData
+                });
+                setStatus(uploadStatus, `Upload complete: ${data.book.title}`);
+                uploadForm.reset();
+                await loadBooks();
+                await loadBook(data.book.id);
+            } catch (error) {
+                setStatus(uploadStatus, error.message, true);
+            }
+        });
+
+        reviewForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            if (!state.currentBookId) {
+                setStatus(reviewStatus, "Please choose a book first.", true);
+                return;
+            }
+            if (!state.selectedText) {
+                setStatus(reviewStatus, "Please select a sentence or passage first.", true);
+                return;
+            }
+
+            setStatus(reviewStatus, "Publishing review...");
+            const formData = new FormData(reviewForm);
+            try {
+                await fetchJson(`/api/books/${state.currentBookId}/reviews`, {
+                    method: "POST",
+                    body: formData
+                });
+                setStatus(reviewStatus, "Review published.");
+                document.getElementById("comment-input").value = "";
+                await loadReviews();
+            } catch (error) {
+                setStatus(reviewStatus, error.message, true);
+            }
+        });
+
+        document.getElementById("refresh-books").addEventListener("click", loadBooks);
+        document.getElementById("refresh-reviews").addEventListener("click", loadReviews);
+        document.getElementById("clear-selection").addEventListener("click", () => {
+            window.getSelection()?.removeAllRanges();
+            setSelectedText("");
+        });
+
+        loadBooks().catch((error) => {
+            setStatus(uploadStatus, error.message, true);
+        });
+        loadReviews();
+    </script>
+</body>
+</html>
