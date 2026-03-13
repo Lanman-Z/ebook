@@ -1,102 +1,148 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EBook Demo Shelf</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <title>电子书共享书架</title>
+    <link rel="stylesheet" href="/static/styles.css?v=3">
 </head>
 <body>
-    <div class="page-shell">
-        <aside class="sidebar">
-            <div class="brand">
-                <p class="eyebrow">FastAPI Demo</p>
-                <h1>EBook Shared Shelf</h1>
-                <p class="muted">Upload PDF or EPUB, open this host IP in a browser, and everyone on the LAN can read and comment.</p>
-            </div>
-
-            <form id="upload-form" class="panel form-panel">
-                <h2>Upload Book</h2>
-                <label>
-                    <span>Book Title</span>
-                    <input id="title-input" name="title" type="text" placeholder="Leave empty to use the file name">
-                </label>
-                <label>
-                    <span>EBook File</span>
-                    <input id="file-input" name="file" type="file" accept=".pdf,.epub" required>
-                </label>
-                <button type="submit">Upload to Shelf</button>
-                <p id="upload-status" class="status-text"></p>
-            </form>
-
-            <section class="panel shelf-panel">
-                <div class="section-title">
-                    <h2>Uploaded Books</h2>
-                    <button id="refresh-books" type="button" class="ghost-button">Refresh</button>
+    <div class="app-shell">
+        <section id="library-screen" class="screen screen-active">
+            <header class="hero">
+                <div>
+                    <p class="eyebrow">本地测试版</p>
+                    <h1>电子书共享书架</h1>
+                    <p class="hero-text">上传 PDF 或 EPUB 后，同一局域网内打开这个 IP 地址的人都能看到书籍，并在句子上留下公开点评。</p>
                 </div>
-                <div id="books-list" class="book-list"></div>
-            </section>
-        </aside>
+                <div class="hero-badge">FastAPI</div>
+            </header>
 
-        <main class="content">
-            <section class="panel reader-panel">
-                <div class="section-title">
-                    <div>
-                        <p class="eyebrow">Reader</p>
-                        <h2 id="book-title">Pick a book</h2>
+            <div class="library-layout">
+                <section class="panel upload-panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="eyebrow">上传区</p>
+                            <h2>上传新书</h2>
+                        </div>
                     </div>
+                    <form id="upload-form" class="form-panel">
+                        <label>
+                            <span>书名</span>
+                            <input id="title-input" name="title" type="text" placeholder="不填则默认使用文件名">
+                        </label>
+                        <label>
+                            <span>电子书文件</span>
+                            <input id="file-input" name="file" type="file" accept=".pdf,.epub" required>
+                        </label>
+                        <button type="submit">上传到书架</button>
+                        <p id="upload-status" class="status-text"></p>
+                    </form>
+                </section>
+
+                <section class="panel shelf-panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="eyebrow">书库</p>
+                            <h2>已上传书籍</h2>
+                        </div>
+                        <button id="refresh-books" type="button" class="ghost-button">刷新书库</button>
+                    </div>
+                    <div id="books-list" class="book-grid"></div>
+                </section>
+            </div>
+        </section>
+
+        <section id="reader-screen" class="screen hidden">
+            <header class="reader-topbar">
+                <button id="back-to-library" type="button" class="ghost-button">返回书库</button>
+                <div class="reader-book-meta">
+                    <h2 id="book-title">阅读中</h2>
                     <p id="book-meta" class="muted"></p>
                 </div>
+            </header>
 
-                <div id="reader-empty" class="empty-state">
-                    <p>Upload a book or choose one from the shelf to start reading.</p>
-                </div>
-
-                <div id="reader-view" class="reader-view hidden">
-                    <div class="selection-bar">
-                        <p>Select a sentence or passage in the reader, then write a public comment for it.</p>
-                        <button id="clear-selection" type="button" class="ghost-button">Clear Selection</button>
-                    </div>
-                    <div id="selected-text-box" class="selected-text-box">
-                        <strong>Current selection:</strong>
-                        <span id="selected-text">Nothing selected yet</span>
-                    </div>
-                    <article id="reader-content" class="reader-content"></article>
-                </div>
-            </section>
-
-            <section class="panel review-panel">
-                <div class="section-title">
+            <section class="panel reading-panel">
+                <div class="panel-head">
                     <div>
-                        <p class="eyebrow">Reviews</p>
-                        <h2>Comment on a line</h2>
+                        <p class="eyebrow">阅读区</p>
+                        <h3>正文</h3>
                     </div>
+                    <div id="pick-mode-tip" class="muted tip-text">点下划线只看别人点评</div>
                 </div>
-
-                <form id="review-form" class="review-form">
-                    <label>
-                        <span>Your Name</span>
-                        <input id="reviewer-input" name="reviewer" type="text" placeholder="For example: Lin" required>
-                    </label>
-                    <label>
-                        <span>Selected Text</span>
-                        <textarea id="selected-text-input" name="selected_text" rows="3" readonly placeholder="Select text in the reader first"></textarea>
-                    </label>
-                    <label>
-                        <span>Your Comment</span>
-                        <textarea id="comment-input" name="comment" rows="4" placeholder="Write what you think..." required></textarea>
-                    </label>
-                    <button id="submit-review" type="submit">Publish Review</button>
-                    <p id="review-status" class="status-text"></p>
-                </form>
-
-                <div class="reviews-header">
-                    <h3>Public Reviews</h3>
-                    <button id="refresh-reviews" type="button" class="ghost-button">Refresh Reviews</button>
+                <article id="reader-content" class="reader-content"></article>
+                <div id="selection-toolbar" class="selection-toolbar hidden">
+                    <button id="open-comment-box" type="button">写想法</button>
                 </div>
-                <div id="reviews-list" class="reviews-list"></div>
+                <div class="floating-reader-tools">
+                    <button id="toggle-pick-mode" type="button" class="reader-fab ghost-button">进入选句点评模式</button>
+                </div>
             </section>
-        </main>
+        </section>
+    </div>
+
+    <div id="mobile-action-dock" class="mobile-action-dock is-hidden">
+        <div class="mobile-action-text">
+            <strong id="mobile-dock-title">手机点评</strong>
+            <span id="mobile-dock-desc">点这里进入选句点评模式</span>
+        </div>
+        <button id="mobile-open-comment-box" type="button">进入点评模式</button>
+    </div>
+
+    <div id="view-modal" class="modal hidden">
+        <div class="modal-backdrop" data-close-view="true"></div>
+        <div class="modal-panel">
+            <div class="modal-head">
+                <div>
+                    <p class="eyebrow">查看点评</p>
+                    <h3>这句话下的点评</h3>
+                </div>
+                <button id="close-view-modal" type="button" class="ghost-button">关闭</button>
+            </div>
+            <div class="sentence-box">
+                <p class="eyebrow">当前句子</p>
+                <blockquote id="view-sentence-text"></blockquote>
+            </div>
+            <div id="view-reviews-list" class="reviews-list"></div>
+        </div>
+    </div>
+
+    <div id="write-modal" class="modal hidden">
+        <div class="modal-backdrop" data-close-write="true"></div>
+        <div class="modal-panel">
+            <div class="modal-head">
+                <div>
+                    <p class="eyebrow">写想法</p>
+                    <h3>为这句话写点评</h3>
+                </div>
+                <button id="close-write-modal" type="button" class="ghost-button">关闭</button>
+            </div>
+
+            <div class="sentence-box">
+                <p class="eyebrow">选中的句子</p>
+                <blockquote id="write-sentence-text"></blockquote>
+            </div>
+
+            <form id="review-form" class="review-form">
+                <label>
+                    <span>你的名字</span>
+                    <input id="reviewer-input" name="reviewer" type="text" placeholder="不填则显示为“匿名读者”">
+                </label>
+                <input id="selected-text-input" name="selected_text" type="hidden">
+                <input id="paragraph-index-input" name="paragraph_index" type="hidden">
+                <input id="start-offset-input" name="start_offset" type="hidden">
+                <input id="end-offset-input" name="end_offset" type="hidden">
+                <label>
+                    <span>你的想法</span>
+                    <textarea id="comment-input" name="comment" rows="5" placeholder="写下你对这句话的感受或理解..." required></textarea>
+                </label>
+                <div class="form-actions">
+                    <button id="submit-review" type="submit">发布点评</button>
+                    <button id="cancel-review" type="button" class="ghost-button">取消</button>
+                </div>
+                <p id="review-status" class="status-text"></p>
+            </form>
+        </div>
     </div>
 
     <script>
@@ -104,22 +150,43 @@
             books: [],
             currentBookId: null,
             currentBook: null,
-            selectedText: ""
+            reviews: [],
+            groupedReviews: {},
+            selectedText: "",
+            selectedAnchor: null,
+            activeAnchorKey: "",
+            isMobile: window.matchMedia("(max-width: 720px)").matches,
+            pickMode: false
         };
 
+        const libraryScreen = document.getElementById("library-screen");
+        const readerScreen = document.getElementById("reader-screen");
         const booksList = document.getElementById("books-list");
         const uploadForm = document.getElementById("upload-form");
         const uploadStatus = document.getElementById("upload-status");
         const reviewForm = document.getElementById("review-form");
         const reviewStatus = document.getElementById("review-status");
-        const selectedTextView = document.getElementById("selected-text");
         const selectedTextInput = document.getElementById("selected-text-input");
+        const paragraphIndexInput = document.getElementById("paragraph-index-input");
+        const startOffsetInput = document.getElementById("start-offset-input");
+        const endOffsetInput = document.getElementById("end-offset-input");
         const readerContent = document.getElementById("reader-content");
-        const reviewsList = document.getElementById("reviews-list");
-        const readerEmpty = document.getElementById("reader-empty");
-        const readerView = document.getElementById("reader-view");
+        const selectionToolbar = document.getElementById("selection-toolbar");
+        const mobileActionDock = document.getElementById("mobile-action-dock");
+        const mobileDockTitle = document.getElementById("mobile-dock-title");
+        const mobileDockDesc = document.getElementById("mobile-dock-desc");
+        const openCommentBox = document.getElementById("open-comment-box");
+        const mobileOpenCommentBox = document.getElementById("mobile-open-comment-box");
+        const togglePickMode = document.getElementById("toggle-pick-mode");
+        const pickModeTip = document.getElementById("pick-mode-tip");
         const bookTitle = document.getElementById("book-title");
         const bookMeta = document.getElementById("book-meta");
+        const commentInput = document.getElementById("comment-input");
+        const viewModal = document.getElementById("view-modal");
+        const writeModal = document.getElementById("write-modal");
+        const viewSentenceText = document.getElementById("view-sentence-text");
+        const writeSentenceText = document.getElementById("write-sentence-text");
+        const viewReviewsList = document.getElementById("view-reviews-list");
 
         function setStatus(element, message, isError = false) {
             element.textContent = message;
@@ -131,69 +198,7 @@
             if (Number.isNaN(date.getTime())) {
                 return isoText;
             }
-            return date.toLocaleString();
-        }
-
-        function setSelectedText(value) {
-            const text = (value || "").trim();
-            state.selectedText = text;
-            selectedTextView.textContent = text || "Nothing selected yet";
-            selectedTextInput.value = text;
-        }
-
-        function renderBooks() {
-            if (!state.books.length) {
-                booksList.innerHTML = '<p class="muted">No books uploaded yet.</p>';
-                return;
-            }
-
-            booksList.innerHTML = state.books.map((book) => `
-                <button class="book-card ${book.id === state.currentBookId ? "active" : ""}" data-book-id="${book.id}">
-                    <span class="book-card-type">${book.file_type.toUpperCase()}</span>
-                    <strong>${escapeHtml(book.title)}</strong>
-                    <span>${escapeHtml(book.original_name)}</span>
-                    <small>${formatTime(book.created_at)}</small>
-                </button>
-            `).join("");
-
-            document.querySelectorAll("[data-book-id]").forEach((button) => {
-                button.addEventListener("click", () => {
-                    loadBook(Number(button.dataset.bookId));
-                });
-            });
-        }
-
-        function renderReader(book) {
-            bookTitle.textContent = book.title;
-            bookMeta.textContent = `${book.file_type.toUpperCase()} | ${book.original_name} | uploaded ${formatTime(book.created_at)}`;
-
-            readerEmpty.classList.add("hidden");
-            readerView.classList.remove("hidden");
-
-            const paragraphs = (book.paragraphs || []).length ? book.paragraphs : [book.content];
-            readerContent.innerHTML = paragraphs.map((paragraph) => `
-                <p class="reader-paragraph">${escapeHtml(paragraph)}</p>
-            `).join("");
-
-            attachSelectionListener();
-        }
-
-        function renderReviews(reviews) {
-            if (!reviews.length) {
-                reviewsList.innerHTML = '<p class="muted">No public reviews for this book yet.</p>';
-                return;
-            }
-
-            reviewsList.innerHTML = reviews.map((review) => `
-                <article class="review-card">
-                    <div class="review-head">
-                        <strong>${escapeHtml(review.reviewer)}</strong>
-                        <span>${formatTime(review.created_at)}</span>
-                    </div>
-                    <blockquote>${escapeHtml(review.selected_text)}</blockquote>
-                    <p>${escapeHtml(review.comment)}</p>
-                </article>
-            `).join("");
+            return date.toLocaleString("zh-CN", { hour12: false });
         }
 
         function escapeHtml(text) {
@@ -205,11 +210,273 @@
                 .replaceAll("'", "&#39;");
         }
 
+        function normalizeText(text) {
+            return (text || "").replace(/\s+/g, " ").trim();
+        }
+
+        function openModal(modal) {
+            modal.classList.remove("hidden");
+            document.body.classList.add("modal-open");
+        }
+
+        function closeModal(modal) {
+            modal.classList.add("hidden");
+            if (viewModal.classList.contains("hidden") && writeModal.classList.contains("hidden")) {
+                document.body.classList.remove("modal-open");
+            }
+        }
+
+        function setSelectedText(text) {
+            const normalized = normalizeText(text);
+            state.selectedText = normalized;
+            selectedTextInput.value = normalized;
+        }
+
+        function setSelectedAnchor(anchor) {
+            state.selectedAnchor = anchor;
+            paragraphIndexInput.value = anchor ? String(anchor.paragraphIndex) : "";
+            startOffsetInput.value = anchor ? String(anchor.startOffset) : "";
+            endOffsetInput.value = anchor ? String(anchor.endOffset) : "";
+        }
+
+        function makeAnchorKey(paragraphIndex, startOffset, endOffset) {
+            return `${paragraphIndex}:${startOffset}:${endOffset}`;
+        }
+
+        function hideSelectionToolbar() {
+            selectionToolbar.classList.add("hidden");
+        }
+
+        function setPickMode(enabled) {
+            state.pickMode = enabled;
+            togglePickMode.textContent = enabled ? "退出选句点评模式" : "进入选句点评模式";
+            togglePickMode.classList.toggle("pick-mode-active", enabled);
+            mobileOpenCommentBox.textContent = enabled ? "退出点评模式" : "进入点评模式";
+            mobileOpenCommentBox.classList.toggle("pick-mode-active", enabled);
+            pickModeTip.textContent = enabled
+                ? "现在直接点正文中的一句话，就会打开写点评窗口"
+                : "点下划线只看别人点评";
+            mobileDockTitle.textContent = enabled ? "正在点评模式" : "手机点评";
+            mobileDockDesc.textContent = enabled
+                ? "现在直接点正文中的一句话即可写点评"
+                : "点这里进入选句点评模式";
+            readerContent.classList.toggle("pick-mode", enabled);
+            mobileActionDock.classList.toggle("pick-mode-active", enabled);
+        }
+
+        function showLibraryScreen() {
+            libraryScreen.classList.remove("hidden");
+            readerScreen.classList.add("hidden");
+            closeModal(viewModal);
+            closeModal(writeModal);
+            hideSelectionToolbar();
+            setPickMode(false);
+            mobileActionDock.classList.add("is-hidden");
+        }
+
+        function showReaderScreen() {
+            readerScreen.classList.remove("hidden");
+            libraryScreen.classList.add("hidden");
+            if (state.isMobile) {
+                mobileActionDock.classList.remove("is-hidden");
+            }
+        }
+
+        function groupReviewsBySentence(reviews) {
+            const grouped = {};
+            for (const review of reviews) {
+                const key = makeAnchorKey(
+                    review.paragraph_index,
+                    review.start_offset,
+                    review.end_offset
+                );
+                if (!grouped[key]) {
+                    grouped[key] = [];
+                }
+                grouped[key].push(review);
+            }
+            return grouped;
+        }
+
+        function renderBooks() {
+            if (!state.books.length) {
+                booksList.innerHTML = '<p class="muted">还没有上传任何电子书。</p>';
+                return;
+            }
+
+            booksList.innerHTML = state.books.map((book) => `
+                <article class="book-card-wrap">
+                    <button class="book-card" data-book-id="${book.id}">
+                        <div class="book-card-top">
+                            <span class="book-type">${book.file_type.toUpperCase()}</span>
+                            <span class="book-time">${formatTime(book.created_at)}</span>
+                        </div>
+                        <strong>${escapeHtml(book.title)}</strong>
+                        <span class="muted">${escapeHtml(book.original_name)}</span>
+                        <span class="open-text">打开阅读</span>
+                    </button>
+                    <button class="delete-book-button" type="button" data-delete-book-id="${book.id}">删除</button>
+                </article>
+            `).join("");
+
+            document.querySelectorAll("[data-book-id]").forEach((button) => {
+                button.addEventListener("click", () => {
+                    loadBook(Number(button.dataset.bookId));
+                });
+            });
+
+            document.querySelectorAll("[data-delete-book-id]").forEach((button) => {
+                button.addEventListener("click", async () => {
+                    const bookId = Number(button.dataset.deleteBookId);
+                    const book = state.books.find((item) => item.id === bookId);
+                    if (!book) {
+                        return;
+                    }
+                    const confirmed = window.confirm(`确定要删除《${book.title}》吗？删除后书籍和点评都会一起移除。`);
+                    if (!confirmed) {
+                        return;
+                    }
+                    try {
+                        await fetchJson(`/api/books/${bookId}`, { method: "DELETE" });
+                        setStatus(uploadStatus, `已删除《${book.title}》。`);
+                        await loadBooks();
+                    } catch (error) {
+                        setStatus(uploadStatus, error.message, true);
+                    }
+                });
+            });
+        }
+
+        function buildAnnotatedParagraph(paragraph, paragraphIndex) {
+            const paragraphReviews = Object.entries(state.groupedReviews)
+                .map(([key, reviews]) => ({ key, reviews }))
+                .filter(({ reviews }) => reviews[0]?.paragraph_index === paragraphIndex)
+                .sort((a, b) => a.reviews[0].start_offset - b.reviews[0].start_offset);
+            const reviewedRanges = new Map(
+                paragraphReviews.map(({ key, reviews }) => [
+                    `${reviews[0].start_offset}:${reviews[0].end_offset}`,
+                    key
+                ])
+            );
+            const sentenceRegex = /[^。！？!?；;\n]+[。！？!?；;”"]*|[^\n]+$/g;
+            const sentences = [];
+            let match;
+
+            while ((match = sentenceRegex.exec(paragraph)) !== null) {
+                const text = match[0];
+                const start = match.index;
+                const end = start + text.length;
+                sentences.push({ text, start, end });
+            }
+
+            if (!sentences.length) {
+                return `<p class="reader-paragraph" data-paragraph-index="${paragraphIndex}">${escapeHtml(paragraph)}</p>`;
+            }
+
+            let html = "";
+            let cursor = 0;
+            for (const sentence of sentences) {
+                if (sentence.start > cursor) {
+                    html += escapeHtml(paragraph.slice(cursor, sentence.start));
+                }
+
+                const anchorKey = reviewedRanges.get(`${sentence.start}:${sentence.end}`) || "";
+                const classNames = ["sentence-unit"];
+                if (state.pickMode) {
+                    classNames.push("sentence-pickable");
+                }
+                if (anchorKey) {
+                    classNames.push("annotated-text");
+                }
+
+                html += `<span class="${classNames.join(" ")}" data-sentence="${encodeURIComponent(sentence.text)}" data-start="${sentence.start}" data-end="${sentence.end}" ${anchorKey ? `data-anchor-key="${anchorKey}" title="点击查看这句话的点评"` : ""}>${escapeHtml(sentence.text)}</span>`;
+                cursor = sentence.end;
+            }
+
+            if (cursor < paragraph.length) {
+                html += escapeHtml(paragraph.slice(cursor));
+            }
+
+            return `<p class="reader-paragraph" data-paragraph-index="${paragraphIndex}">${html}</p>`;
+        }
+
+        function renderReader() {
+            const book = state.currentBook;
+            if (!book) {
+                return;
+            }
+
+            bookTitle.textContent = book.title;
+            bookMeta.textContent = `${book.file_type.toUpperCase()} · ${book.original_name} · 上传时间 ${formatTime(book.created_at)}`;
+
+            const paragraphs = (book.paragraphs || []).length ? book.paragraphs : [book.content];
+            readerContent.innerHTML = paragraphs
+                .map((paragraph, index) => buildAnnotatedParagraph(paragraph, index))
+                .join("");
+
+            readerContent.querySelectorAll(".annotated-text").forEach((button) => {
+                button.addEventListener("click", (event) => {
+                    event.stopPropagation();
+                    showSentenceReviews(button.dataset.anchorKey || "");
+                });
+            });
+        }
+
+        function showSentenceReviews(anchorKey) {
+            const reviews = state.groupedReviews[anchorKey] || [];
+            state.activeAnchorKey = anchorKey;
+            closeModal(writeModal);
+            viewSentenceText.textContent = reviews.length ? reviews[0].selected_text : "这句话暂时还没有点评。";
+            viewReviewsList.innerHTML = reviews.length
+                ? reviews.map((review) => `
+                    <article class="review-card">
+                        <div class="review-head">
+                            <strong>${escapeHtml(review.reviewer)}</strong>
+                            <span>${formatTime(review.created_at)}</span>
+                        </div>
+                        <p>${escapeHtml(review.comment)}</p>
+                    </article>
+                `).join("")
+                : '<p class="muted">这句话暂时还没有点评。</p>';
+            openModal(viewModal);
+        }
+
+        function openWriteModalFromSentence(text, anchor) {
+            setSelectedText(text);
+            setSelectedAnchor(anchor);
+            reviewForm.dataset.selectedText = text;
+            reviewForm.dataset.paragraphIndex = String(anchor.paragraphIndex);
+            reviewForm.dataset.startOffset = String(anchor.startOffset);
+            reviewForm.dataset.endOffset = String(anchor.endOffset);
+            writeSentenceText.textContent = text;
+            setStatus(reviewStatus, "");
+            closeModal(viewModal);
+            openModal(writeModal);
+            commentInput.focus();
+        }
+
+        function showReviewFormFromSelection() {
+            const selection = window.getSelection();
+            const selectedText = normalizeText(selection ? selection.toString() : "");
+            const anchor = resolveSelectionAnchor(selection);
+
+            if (!selectedText) {
+                alert("请先选中文字，再点击“写想法”。");
+                return;
+            }
+            if (!anchor) {
+                alert("暂时只能在同一个自然段内选择内容来写点评，请重新选择。");
+                return;
+            }
+
+            openWriteModalFromSentence(selectedText, anchor);
+        }
+
         async function fetchJson(url, options = {}) {
             const response = await fetch(url, options);
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) {
-                throw new Error(payload.detail || "Request failed");
+                throw new Error(payload.detail || "请求失败");
             }
             return payload;
         }
@@ -221,48 +488,148 @@
         }
 
         async function loadBook(bookId) {
-            const data = await fetchJson(`/api/books/${bookId}`);
+            const [bookData, reviewData] = await Promise.all([
+                fetchJson(`/api/books/${bookId}`),
+                fetchJson(`/api/books/${bookId}/reviews`)
+            ]);
+
             state.currentBookId = bookId;
-            state.currentBook = data.book;
-            renderBooks();
-            renderReader(data.book);
-            setSelectedText("");
-            await loadReviews();
+            state.currentBook = bookData.book;
+            state.reviews = reviewData.reviews || [];
+            state.groupedReviews = groupReviewsBySentence(state.reviews);
+            state.activeAnchorKey = "";
+
+            showReaderScreen();
+            renderReader();
+            hideSelectionToolbar();
+            setPickMode(false);
+            window.scrollTo({ top: 0, behavior: "smooth" });
         }
 
-        async function loadReviews() {
+        async function refreshReviews() {
             if (!state.currentBookId) {
-                reviewsList.innerHTML = '<p class="muted">Open a book to see its reviews.</p>';
                 return;
             }
             const data = await fetchJson(`/api/books/${state.currentBookId}/reviews`);
-            renderReviews(data.reviews || []);
+            state.reviews = data.reviews || [];
+            state.groupedReviews = groupReviewsBySentence(state.reviews);
+            renderReader();
         }
 
-        function attachSelectionListener() {
-            readerContent.onmouseup = () => {
-                const selected = window.getSelection()?.toString() || "";
-                setSelectedText(selected);
+        function getTextOffset(container, targetNode, targetOffset) {
+            const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+            let total = 0;
+            while (walker.nextNode()) {
+                const node = walker.currentNode;
+                if (node === targetNode) {
+                    return total + targetOffset;
+                }
+                total += node.textContent.length;
+            }
+            return -1;
+        }
+
+        function resolveSelectionAnchor(selection) {
+            if (!selection || selection.rangeCount === 0) {
+                return null;
+            }
+
+            const range = selection.getRangeAt(0);
+            const startElement = range.startContainer.nodeType === Node.TEXT_NODE
+                ? range.startContainer.parentElement
+                : range.startContainer;
+            const endElement = range.endContainer.nodeType === Node.TEXT_NODE
+                ? range.endContainer.parentElement
+                : range.endContainer;
+            const startParagraph = startElement?.closest(".reader-paragraph");
+            const endParagraph = endElement?.closest(".reader-paragraph");
+
+            if (!startParagraph || startParagraph !== endParagraph) {
+                return null;
+            }
+
+            const paragraphIndex = Number(startParagraph.dataset.paragraphIndex);
+            const startOffset = getTextOffset(startParagraph, range.startContainer, range.startOffset);
+            const endOffset = getTextOffset(startParagraph, range.endContainer, range.endOffset);
+
+            if (Number.isNaN(paragraphIndex) || startOffset < 0 || endOffset <= startOffset) {
+                return null;
+            }
+
+            return { paragraphIndex, startOffset, endOffset };
+        }
+
+        function getSentenceAnchor(sentenceElement) {
+            const paragraph = sentenceElement.closest(".reader-paragraph");
+            if (!paragraph) {
+                return null;
+            }
+            const paragraphIndex = Number(paragraph.dataset.paragraphIndex);
+            const text = decodeURIComponent(sentenceElement.dataset.sentence || "");
+            const startOffset = Number(sentenceElement.dataset.start || "");
+            const endOffset = Number(sentenceElement.dataset.end || "");
+            if (!text || Number.isNaN(paragraphIndex) || Number.isNaN(startOffset) || Number.isNaN(endOffset)) {
+                return null;
+            }
+            return {
+                text,
+                anchor: {
+                    paragraphIndex,
+                    startOffset,
+                    endOffset
+                }
             };
-            readerContent.onkeyup = () => {
-                const selected = window.getSelection()?.toString() || "";
-                setSelectedText(selected);
-            };
+        }
+
+        function handleTextSelection() {
+            const selection = window.getSelection();
+            const selectedText = normalizeText(selection ? selection.toString() : "");
+            if (!selectedText) {
+                hideSelectionToolbar();
+                setSelectedText("");
+                setSelectedAnchor(null);
+                return;
+            }
+
+            const anchor = resolveSelectionAnchor(selection);
+            if (!anchor) {
+                hideSelectionToolbar();
+                setSelectedAnchor(null);
+                return;
+            }
+
+            setSelectedText(selectedText);
+            setSelectedAnchor(anchor);
+
+            if (state.isMobile || state.pickMode) {
+                return;
+            }
+
+            const rect = selection.getRangeAt(0).getBoundingClientRect();
+            const buttonWidth = 96;
+            const left = Math.min(
+                Math.max(12, rect.left + rect.width / 2 - buttonWidth / 2),
+                window.innerWidth - buttonWidth - 12
+            );
+            const top = rect.top - 44 < 12 ? rect.bottom + 8 : rect.top - 44;
+
+            selectionToolbar.style.left = `${left}px`;
+            selectionToolbar.style.top = `${top}px`;
+            selectionToolbar.classList.remove("hidden");
         }
 
         uploadForm.addEventListener("submit", async (event) => {
             event.preventDefault();
-            setStatus(uploadStatus, "Uploading and parsing the ebook...");
+            setStatus(uploadStatus, "正在上传并解析电子书...");
             const formData = new FormData(uploadForm);
             try {
                 const data = await fetchJson("/api/books", {
                     method: "POST",
                     body: formData
                 });
-                setStatus(uploadStatus, `Upload complete: ${data.book.title}`);
+                setStatus(uploadStatus, `上传成功：《${data.book.title}》已加入书架。`);
                 uploadForm.reset();
                 await loadBooks();
-                await loadBook(data.book.id);
             } catch (error) {
                 setStatus(uploadStatus, error.message, true);
             }
@@ -271,40 +638,154 @@
         reviewForm.addEventListener("submit", async (event) => {
             event.preventDefault();
             if (!state.currentBookId) {
-                setStatus(reviewStatus, "Please choose a book first.", true);
+                setStatus(reviewStatus, "请先打开一本书。", true);
                 return;
             }
-            if (!state.selectedText) {
-                setStatus(reviewStatus, "Please select a sentence or passage first.", true);
+            const selectedText = (selectedTextInput.value || reviewForm.dataset.selectedText || "").trim();
+            const paragraphIndex = paragraphIndexInput.value || reviewForm.dataset.paragraphIndex || "";
+            const startOffset = startOffsetInput.value || reviewForm.dataset.startOffset || "";
+            const endOffset = endOffsetInput.value || reviewForm.dataset.endOffset || "";
+
+            if (!selectedText || paragraphIndex === "" || startOffset === "" || endOffset === "") {
+                setStatus(reviewStatus, "请先选中你想点评的句子。", true);
                 return;
             }
 
-            setStatus(reviewStatus, "Publishing review...");
+            selectedTextInput.value = selectedText;
+            paragraphIndexInput.value = paragraphIndex;
+            startOffsetInput.value = startOffset;
+            endOffsetInput.value = endOffset;
+
+            setStatus(reviewStatus, "正在发布点评...");
+            const submitButton = document.getElementById("submit-review");
+            submitButton.disabled = true;
             const formData = new FormData(reviewForm);
             try {
                 await fetchJson(`/api/books/${state.currentBookId}/reviews`, {
                     method: "POST",
                     body: formData
                 });
-                setStatus(reviewStatus, "Review published.");
-                document.getElementById("comment-input").value = "";
-                await loadReviews();
+                state.activeAnchorKey = makeAnchorKey(
+                    Number(paragraphIndex),
+                    Number(startOffset),
+                    Number(endOffset)
+                );
+                reviewForm.reset();
+                reviewForm.dataset.selectedText = "";
+                reviewForm.dataset.paragraphIndex = "";
+                reviewForm.dataset.startOffset = "";
+                reviewForm.dataset.endOffset = "";
+                setSelectedText("");
+                setSelectedAnchor(null);
+                hideSelectionToolbar();
+                setPickMode(false);
+                await refreshReviews();
+                closeModal(writeModal);
+                setStatus(uploadStatus, "点评发布成功。");
             } catch (error) {
                 setStatus(reviewStatus, error.message, true);
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+
+        openCommentBox.addEventListener("click", showReviewFormFromSelection);
+
+        mobileOpenCommentBox.addEventListener("click", () => {
+            setPickMode(!state.pickMode);
+        });
+
+        togglePickMode.addEventListener("click", () => {
+            setPickMode(!state.pickMode);
+        });
+
+        readerContent.addEventListener("mouseup", () => {
+            setTimeout(handleTextSelection, 80);
+        });
+
+        readerContent.addEventListener("touchend", () => {
+            setTimeout(handleTextSelection, 280);
+        });
+
+        readerContent.addEventListener("click", (event) => {
+            const annotated = event.target.closest(".annotated-text");
+            if (annotated) {
+                return;
+            }
+            if (!state.pickMode) {
+                return;
+            }
+            const sentence = event.target.closest(".sentence-unit");
+            if (!sentence) {
+                return;
+            }
+            const sentenceData = getSentenceAnchor(sentence);
+            if (!sentenceData) {
+                return;
+            }
+            openWriteModalFromSentence(sentenceData.text, sentenceData.anchor);
+        });
+
+        document.addEventListener("selectionchange", () => {
+            if (!state.isMobile) {
+                return;
+            }
+            const currentSelection = window.getSelection();
+            const selected = normalizeText(currentSelection?.toString() || "");
+            const anchor = resolveSelectionAnchor(currentSelection);
+            if (selected && anchor) {
+                setSelectedText(selected);
+                setSelectedAnchor(anchor);
+            } else if (!selected && !state.pickMode) {
+                setSelectedText("");
+                setSelectedAnchor(null);
+            }
+        });
+
+        document.addEventListener("mousedown", (event) => {
+            if (!selectionToolbar.contains(event.target)) {
+                setTimeout(() => {
+                    if (!normalizeText(window.getSelection()?.toString() || "")) {
+                        hideSelectionToolbar();
+                    }
+                }, 10);
             }
         });
 
         document.getElementById("refresh-books").addEventListener("click", loadBooks);
-        document.getElementById("refresh-reviews").addEventListener("click", loadReviews);
-        document.getElementById("clear-selection").addEventListener("click", () => {
-            window.getSelection()?.removeAllRanges();
-            setSelectedText("");
+        document.getElementById("back-to-library").addEventListener("click", showLibraryScreen);
+        document.getElementById("cancel-review").addEventListener("click", () => {
+            closeModal(writeModal);
+            setPickMode(false);
+        });
+        document.getElementById("close-view-modal").addEventListener("click", () => closeModal(viewModal));
+        document.getElementById("close-write-modal").addEventListener("click", () => closeModal(writeModal));
+        viewModal.addEventListener("click", (event) => {
+            if (event.target.dataset.closeView === "true") {
+                closeModal(viewModal);
+            }
+        });
+        writeModal.addEventListener("click", (event) => {
+            if (event.target.dataset.closeWrite === "true") {
+                closeModal(writeModal);
+            }
         });
 
+        window.matchMedia("(max-width: 720px)").addEventListener("change", (event) => {
+            state.isMobile = event.matches;
+            hideSelectionToolbar();
+            setPickMode(false);
+            if (event.matches && !readerScreen.classList.contains("hidden")) {
+                mobileActionDock.classList.remove("is-hidden");
+            } else {
+                mobileActionDock.classList.add("is-hidden");
+            }
+        });
+
+        mobileActionDock.classList.add("is-hidden");
         loadBooks().catch((error) => {
             setStatus(uploadStatus, error.message, true);
         });
-        loadReviews();
     </script>
 </body>
 </html>
